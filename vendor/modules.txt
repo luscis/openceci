@@ -1,0 +1,96 @@
+# github.com/coreos/go-systemd/v22 v22.3.2
+## explicit
+github.com/coreos/go-systemd/v22/daemon
+# github.com/go-ldap/ldap v3.0.3+incompatible
+## explicit
+github.com/go-ldap/ldap
+# github.com/gorilla/mux v1.8.0
+## explicit
+github.com/gorilla/mux
+# github.com/klauspost/cpuid v1.3.1
+github.com/klauspost/cpuid
+# github.com/klauspost/reedsolomon v1.9.9
+github.com/klauspost/reedsolomon
+# github.com/luscis/libol v0.0.0-20250331032641-e685f5691d61
+## explicit
+github.com/luscis/libol
+# github.com/mmcloughlin/avo v0.0.0-20200803215136-443f81d77104
+github.com/mmcloughlin/avo/attr
+github.com/mmcloughlin/avo/build
+github.com/mmcloughlin/avo/buildtags
+github.com/mmcloughlin/avo/gotypes
+github.com/mmcloughlin/avo/internal/prnt
+github.com/mmcloughlin/avo/internal/stack
+github.com/mmcloughlin/avo/ir
+github.com/mmcloughlin/avo/operand
+github.com/mmcloughlin/avo/pass
+github.com/mmcloughlin/avo/printer
+github.com/mmcloughlin/avo/reg
+github.com/mmcloughlin/avo/src
+github.com/mmcloughlin/avo/x86
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
+# github.com/templexxx/cpu v0.0.7
+github.com/templexxx/cpu
+# github.com/templexxx/xorsimd v0.4.1
+github.com/templexxx/xorsimd
+# github.com/tjfoc/gmsm v1.3.2
+github.com/tjfoc/gmsm/sm4
+# github.com/vishvananda/netlink v1.1.0
+## explicit
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+github.com/vishvananda/netns
+# github.com/xtaci/kcp-go/v5 v5.6.1
+## explicit
+github.com/xtaci/kcp-go/v5
+# golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de => github.com/golang/crypto v0.0.0-20200604202706-70a84ac30bf9
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/cast5
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/salsa20
+golang.org/x/crypto/salsa20/salsa
+golang.org/x/crypto/tea
+golang.org/x/crypto/twofish
+golang.org/x/crypto/xtea
+# golang.org/x/mod v0.3.0
+golang.org/x/mod/semver
+# golang.org/x/net v0.0.0-20210525063256-abc453219eb5 => github.com/golang/net v0.0.0-20190812203447-cdfb69ac37fc
+## explicit
+golang.org/x/net/bpf
+golang.org/x/net/context
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
+golang.org/x/net/websocket
+# golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf => github.com/golang/sys v0.0.0-20190209173611-3b5209105503
+## explicit
+golang.org/x/sys/unix
+# golang.org/x/tools v0.0.0-20200808161706-5bf02b21f123
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/gcimporter
+golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/go/packages
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typesinternal
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
+# gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d
+## explicit
+gopkg.in/asn1-ber.v1
+# gopkg.in/yaml.v2 v2.4.0
+## explicit
+gopkg.in/yaml.v2
+# golang.org/x/crypto => github.com/golang/crypto v0.0.0-20200604202706-70a84ac30bf9
+# golang.org/x/net => github.com/golang/net v0.0.0-20190812203447-cdfb69ac37fc
+# golang.org/x/sys => github.com/golang/sys v0.0.0-20190209173611-3b5209105503
+# golang.org/x/time => github.com/golang/time v0.0.0-20210220033141-f8bda1e9f3ba
