@@ -1,20 +1,47 @@
-# github.com/coreos/go-systemd/v22 v22.3.2
+# github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 => github.com/sirupsen/logrus v1.8.1
+## explicit; go 1.13
+github.com/Sirupsen/logrus
+# github.com/chzyer/logex v1.2.1
+## explicit; go 1.15
+# github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 ## explicit
+github.com/chzyer/readline
+# github.com/coreos/go-systemd/v22 v22.3.2
+## explicit; go 1.12
 github.com/coreos/go-systemd/v22/daemon
 # github.com/go-ldap/ldap v3.0.3+incompatible
 ## explicit
 github.com/go-ldap/ldap
-# github.com/gorilla/mux v1.8.0
+# github.com/godbus/dbus v4.1.0+incompatible
 ## explicit
+github.com/godbus/dbus
+# github.com/gorilla/mux v1.8.0
+## explicit; go 1.12
 github.com/gorilla/mux
 # github.com/klauspost/cpuid v1.3.1
+## explicit; go 1.12
 github.com/klauspost/cpuid
 # github.com/klauspost/reedsolomon v1.9.9
+## explicit; go 1.14
 github.com/klauspost/reedsolomon
-# github.com/luscis/libol v0.0.0-20250331032641-e685f5691d61
+# github.com/kr/pretty v0.1.0
 ## explicit
-github.com/luscis/libol
+# github.com/luscis/openlan v0.0.0-20260224081621-c10942774a25
+## explicit; go 1.24.0
+github.com/luscis/openlan/pkg/access
+github.com/luscis/openlan/pkg/access/http
+github.com/luscis/openlan/pkg/config
+github.com/luscis/openlan/pkg/libol
+github.com/luscis/openlan/pkg/models
+github.com/luscis/openlan/pkg/network
+github.com/luscis/openlan/pkg/schema
+github.com/luscis/openlan/pkg/socks5
+github.com/luscis/openlan/pkg/water
+# github.com/miekg/dns v1.1.72
+## explicit; go 1.24.0
+github.com/miekg/dns
 # github.com/mmcloughlin/avo v0.0.0-20200803215136-443f81d77104
+## explicit; go 1.11
 github.com/mmcloughlin/avo/attr
 github.com/mmcloughlin/avo/build
 github.com/mmcloughlin/avo/buildtags
@@ -28,37 +55,49 @@ github.com/mmcloughlin/avo/printer
 github.com/mmcloughlin/avo/reg
 github.com/mmcloughlin/avo/src
 github.com/mmcloughlin/avo/x86
+# github.com/moby/libnetwork v0.5.6
+## explicit
+github.com/moby/libnetwork/iptables
 # github.com/pkg/errors v0.9.1
+## explicit
 github.com/pkg/errors
+# github.com/sirupsen/logrus v1.6.0
+## explicit; go 1.13
 # github.com/templexxx/cpu v0.0.7
+## explicit
 github.com/templexxx/cpu
 # github.com/templexxx/xorsimd v0.4.1
+## explicit; go 1.13
 github.com/templexxx/xorsimd
 # github.com/tjfoc/gmsm v1.3.2
+## explicit; go 1.12
 github.com/tjfoc/gmsm/sm4
 # github.com/vishvananda/netlink v1.1.0
-## explicit
+## explicit; go 1.12
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+## explicit; go 1.12
 github.com/vishvananda/netns
 # github.com/xtaci/kcp-go/v5 v5.6.1
-## explicit
+## explicit; go 1.13
 github.com/xtaci/kcp-go/v5
-# golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de => github.com/golang/crypto v0.0.0-20200604202706-70a84ac30bf9
+# golang.org/x/crypto v0.46.0
+## explicit; go 1.24.0
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
-golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/internal/alias
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/salsa20
 golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/tea
 golang.org/x/crypto/twofish
 golang.org/x/crypto/xtea
-# golang.org/x/mod v0.3.0
+# golang.org/x/mod v0.31.0
+## explicit; go 1.24.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20210525063256-abc453219eb5 => github.com/golang/net v0.0.0-20190812203447-cdfb69ac37fc
-## explicit
+# golang.org/x/net v0.48.0
+## explicit; go 1.24.0
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/internal/iana
@@ -66,31 +105,41 @@ golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/websocket
-# golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf => github.com/golang/sys v0.0.0-20190209173611-3b5209105503
-## explicit
+# golang.org/x/sync v0.19.0
+## explicit; go 1.24.0
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.39.0
+## explicit; go 1.24.0
 golang.org/x/sys/unix
-# golang.org/x/tools v0.0.0-20200808161706-5bf02b21f123
+golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
+# golang.org/x/tools v0.40.0
+## explicit; go 1.24.0
+golang.org/x/tools/go/ast/edge
+golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
+golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/go/types/typeutil
+golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
 golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gcimporter
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/stdlib
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
-# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
+golang.org/x/tools/internal/versions
 # gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d
 ## explicit
 gopkg.in/asn1-ber.v1
-# gopkg.in/yaml.v2 v2.4.0
+# gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 ## explicit
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
 gopkg.in/yaml.v2
-# golang.org/x/crypto => github.com/golang/crypto v0.0.0-20200604202706-70a84ac30bf9
-# golang.org/x/net => github.com/golang/net v0.0.0-20190812203447-cdfb69ac37fc
-# golang.org/x/sys => github.com/golang/sys v0.0.0-20190209173611-3b5209105503
-# golang.org/x/time => github.com/golang/time v0.0.0-20210220033141-f8bda1e9f3ba
+# github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.1

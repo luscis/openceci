@@ -1,0 +1,49 @@
+package libol
+
+import "fmt"
+
+type PrefixPath struct {
+	Gw     string
+	Link   string
+	Weight int
+}
+
+type Prefix struct {
+	Link      string
+	Dst       string
+	Src       string
+	Gw        string
+	Protocol  string
+	Priority  int
+	Table     int
+	MultiPath []PrefixPath
+}
+
+type Neighbor struct {
+	Link    string
+	Address string
+	HwAddr  string
+	State   string
+}
+
+type ConnStats struct {
+	Total int
+	TCP   int
+	UDP   int
+	ICMP  int
+}
+
+func (c ConnStats) String() string {
+	return fmt.Sprintf("total %d|tcp %d|udp %d|icmp %d", c.Total, c.TCP, c.UDP, c.ICMP)
+}
+
+type Device struct {
+	Name  string
+	Send  uint64
+	Recv  uint64
+	Drop  uint64
+	Mac   string
+	State string
+	Mtu   int
+	Type  string
+}

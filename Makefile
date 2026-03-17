@@ -16,7 +16,7 @@ WIN_DIR ?= "openceci-windows-$(VER).$(ARCH)"
 MAC_DIR ?= "openceci-darwin-$(VER).$(ARCH)"
 
 ## declare flags
-MOD = github.com/luscis/libol
+MOD = github.com/luscis/openlan/pkg/libol
 LDFLAGS += -X $(MOD).Date=$(shell date +%FT%T%z)
 LDFLAGS += -X $(MOD).Version=$(VER)
 
@@ -33,6 +33,7 @@ update:
 	mkdir -p $(BUILD_DIR)
 	git pull
 	git submodule init
+	git submodule update
 	go version
 	gofmt -w -s ./pkg ./cmd
 
@@ -45,18 +46,18 @@ builder:
 	docker run -d -it \
 	--env http_proxy="${http_proxy}" --env https_proxy="${https_proxy}" \
 	--volume $(SRC_DIR)/:/opt/openceci --volume $(shell echo ~)/.ssh:/root/.ssh \
-	--name openceci_der debian:bullseye bash
-	docker exec openceci_der bash -c "apt update && apt install -y git lsb-release wget make gcc"
-	docker exec openceci_der bash -c "wget https://golang.google.cn/dl/go1.16.linux-amd64.tar.gz && tar -xf go1.16.linux-amd64.tar.gz -C /usr/local"
-	docker exec openceci_der bash -c "cd /usr/local/bin && ln -s ../go/bin/go . && ln -s ../go/bin/gofmt ."
-	docker exec openceci_der git config --global --add safe.directory /opt/openceci
-	docker exec openceci_der git config --global --add safe.directory /opt/openceci/dist/cert
+	--name openceci_dev debian:bullseye bash
+	docker exec openceci_dev bash -c "apt update && apt install -y git lsb-release wget make gcc"
+	docker exec openceci_dev bash -c "wget https://golang.google.cn/dl/go1.24.0.linux-amd64.tar.gz && tar -xf go1.24.0.linux-amd64.tar.gz -C /usr/local"
+	docker exec openceci_dev bash -c "cd /usr/local/bin && ln -s ../go/bin/go . && ln -s ../go/bin/gofmt ."
+	docker exec openceci_dev git config --global --add safe.directory /opt/openceci
+	docker exec openceci_dev git config --global --add safe.directory /opt/openceci/dist/cert
 
 docker-gzip: ## binary by Docker
-	docker exec openceci_der bash -c "cd /opt/openceci && make gzip"
+	docker exec openceci_dev bash -c "cd /opt/openceci && make gzip"
 
 docker-ceci: ## binary for ceci by Docker
-	docker exec openceci_der bash -c "cd /opt/openceci && make ceci"
+	docker exec openceci_dev bash -c "cd /opt/openceci && make ceci"
 
 docker-rhel: docker-bin ## build image for redhat
 	cp -rf $(SRC_DIR)/docker/centos $(BUILD_DIR)
@@ -91,8 +92,9 @@ linux-gzip: install ## build linux packages
 install: update linux-ceci ## install packages
 	@mkdir -p $(LIN_DIR)
 	@cp -rf $(SRC_DIR)/dist/rootfs/{etc,usr} $(LIN_DIR)
-	@cp -rf $(SRC_DIR)/dist/cert/openlan/cert $(LIN_DIR)/etc/openceci
-	@cp -rf $(SRC_DIR)/dist/cert/openlan/ca/ca.crt $(LIN_DIR)/etc/openceci/cert
+	@mkdir -p $(LIN_DIR)/var/openlan
+	@cp -rf $(SRC_DIR)/dist/cert/openlan/cert $(LIN_DIR)/var/openlan
+	@cp -rf $(SRC_DIR)/dist/cert/openlan/ca/ca.crt $(LIN_DIR)/var/openlan/cert
 	@mkdir -p $(LIN_DIR)/usr/bin
 	@cp -rf $(BUILD_DIR)/openceci $(LIN_DIR)/usr/bin
 	@echo "Installed to $(LIN_DIR)"

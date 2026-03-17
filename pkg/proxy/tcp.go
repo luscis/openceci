@@ -5,8 +5,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/luscis/libol"
-	co "github.com/luscis/openceci/pkg/config"
+	"github.com/luscis/openlan/pkg/config"
+	"github.com/luscis/openlan/pkg/libol"
 )
 
 type TcpProxy struct {
@@ -17,12 +17,15 @@ type TcpProxy struct {
 	rr       uint64
 }
 
-func NewTcpProxy(cfg *co.TcpProxy) *TcpProxy {
+func NewTcpProxy(cfg *config.TcpProxy) *TcpProxy {
 	return &TcpProxy{
 		listen: cfg.Listen,
 		target: cfg.Target,
 		out:    libol.NewSubLogger(cfg.Listen),
 	}
+}
+
+func (t *TcpProxy) Initialize() {
 }
 
 func (t *TcpProxy) tunnel(src net.Conn, dst net.Conn) {
@@ -101,13 +104,15 @@ func (t *TcpProxy) Start() {
 			}
 		}
 	})
-	return
 }
 
 func (t *TcpProxy) Stop() {
 	if t.listener != nil {
-		_ = t.listener.Close()
+		t.listener.Close()
+		t.listener = nil
 	}
 	t.out.Info("TcpProxy.Stop")
-	t.listener = nil
+}
+
+func (t *TcpProxy) Save() {
 }

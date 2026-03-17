@@ -1,2 +1,0 @@
-# libol
-OpenLAN library

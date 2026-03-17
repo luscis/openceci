@@ -3,6 +3,7 @@ package proxy
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -20,8 +21,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/luscis/libol"
-	co "github.com/luscis/openceci/pkg/config"
+	co "github.com/luscis/openlan/pkg/config"
+	"github.com/luscis/openlan/pkg/libol"
 	"gopkg.in/yaml.v2"
 )
 
@@ -47,6 +48,7 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 type HttpProxy struct {
+	proxer   Proxyer
 	pass     map[string]string
 	out      *libol.SubLogger
 	server   *http.Server
@@ -115,32 +117,35 @@ func encodeText(w http.ResponseWriter, tmpl string, v interface{}) {
 	}
 }
 
-func NewHttpProxy(cfg *co.HttpProxy) *HttpProxy {
+func NewHttpProxy(cfg *co.HttpProxy, px Proxyer) *HttpProxy {
 	h := &HttpProxy{
 		out:      libol.NewSubLogger(cfg.Listen),
 		cfg:      cfg,
 		pass:     make(map[string]string),
 		api:      mux.NewRouter(),
 		requests: make(map[string]*HttpRecord),
+		proxer:   px,
 	}
-
-	h.server = &http.Server{
-		Addr:    cfg.Listen,
-		Handler: h,
-	}
-	user, pass := co.SplitSecret(cfg.Secret)
-	if user != "" {
-		h.pass[user] = pass
-		h.out.Debug("HttpProxy: Auth user %s", user)
-	}
-	if cfg.SocksProxy != nil {
-		h.socks = NewSocksProxy(cfg.SocksProxy)
-		h.socks.server.SetBackends(h)
-	}
-	h.loadUrl()
-	h.loadPass()
-
+	h.Initialize()
 	return h
+}
+
+func (t *HttpProxy) Initialize() {
+	t.server = &http.Server{
+		Addr:    t.cfg.Listen,
+		Handler: t,
+	}
+	user, pass := co.SplitSecret(t.cfg.Secret)
+	if user != "" {
+		t.pass[user] = pass
+		t.out.Debug("HttpProxy: Auth user %s", user)
+	}
+	if t.cfg.SocksProxy != nil {
+		t.socks = NewSocksProxy(t.cfg.SocksProxy)
+		t.socks.server.SetBackends(t)
+	}
+	t.loadUrl()
+	t.loadPass()
 }
 
 func (t *HttpProxy) loadUrl() {
@@ -279,24 +284,23 @@ func (t *HttpProxy) openConn(protocol, remote string, insecure bool) (net.Conn, 
 		}
 		caFile := t.cfg.CaCert
 		if caFile != "" && libol.FileExist(caFile) == nil {
-			caCertPool := x509.NewCertPool()
+			roots, err := x509.SystemCertPool()
 			// Load CA cert
 			caCert, err := os.ReadFile(caFile)
 			if err != nil {
 				t.out.Warn("HttpProxy.openConn %s", err)
 			} else {
-				caCertPool.AppendCertsFromPEM(caCert)
-				conf.RootCAs = caCertPool
+				roots.AppendCertsFromPEM(caCert)
+				conf.RootCAs = roots
 			}
 		}
 		dialer := &net.Dialer{Timeout: 10 * time.Second}
 		return tls.DialWithDialer(dialer, "tcp", remote, conf)
-
 	}
 	return net.DialTimeout("tcp", remote, 10*time.Second)
 }
 
-func (h *HttpProxy) FindBackend(host string) *co.HttpForward {
+func (h *HttpProxy) FindBackend(host string) *co.ForwardTo {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	return h.cfg.Backends.FindBackend(host)
@@ -381,7 +385,7 @@ func (t *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.doRecord(r, 0)
 	via := t.FindBackend(r.URL.Host)
 	if via != nil {
-		t.out.Info("HttpProxy.ServeHTTP %s %s -> %s via %s", r.Method, r.RemoteAddr, r.URL.Host, via.Server)
+		t.out.Info("HttpProxy.ServeHTTP %s <- %s %s", via.Server, r.Method, r.URL.Host)
 		conn, err := t.openConn(via.Protocol, via.Server, via.Insecure)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
@@ -405,7 +409,7 @@ func (t *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t.out.Info("HttpProxy.ServeHTTP %s %s -> %s", r.Method, r.RemoteAddr, r.URL.Host)
+	t.out.Info("HttpProxy.ServeHTTP %s -> %s %s", r.RemoteAddr, r.Method, r.URL.Host)
 	if r.Method == "CONNECT" { //RFC-7231 Tunneling TCP based protocols through Web Proxy servers
 		conn, err := t.openConn("", r.URL.Host, true)
 		if err != nil {
@@ -607,14 +611,13 @@ func (t *HttpProxy) AddMatch(w http.ResponseWriter, r *http.Request) {
 	backend := vars["backend"]
 
 	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	if t.cfg.AddMatch(domain, backend) > -1 {
 		encodeYaml(w, "success")
 	} else {
 		encodeYaml(w, "failed")
 	}
-	t.save()
+	t.lock.Unlock()
+	t.Save()
 }
 
 func (t *HttpProxy) AddUser(w http.ResponseWriter, r *http.Request) {
@@ -646,8 +649,15 @@ func (t *HttpProxy) DelUser(w http.ResponseWriter, r *http.Request) {
 	t.savePass()
 }
 
-func (t *HttpProxy) save() {
-	t.cfg.Save()
+func (t *HttpProxy) Save() {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	if t.proxer == nil {
+		t.cfg.Save()
+	} else {
+		t.proxer.Save()
+	}
 }
 
 func (t *HttpProxy) DelMatch(w http.ResponseWriter, r *http.Request) {
@@ -657,14 +667,14 @@ func (t *HttpProxy) DelMatch(w http.ResponseWriter, r *http.Request) {
 	backend := vars["backend"]
 
 	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	if t.cfg.DelMatch(domain, backend) > -1 {
 		encodeYaml(w, "success")
 	} else {
 		encodeYaml(w, "failed")
 	}
-	t.save()
+	t.lock.Unlock()
+
+	t.Save()
 }
 
 func (t *HttpProxy) GetPac(w http.ResponseWriter, r *http.Request) {
@@ -711,4 +721,11 @@ func (t *HttpProxy) GetApi(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	encodeYaml(w, urls)
+}
+
+func (t *HttpProxy) Stop() {
+	if t.server != nil {
+		t.server.Shutdown(context.Background())
+		t.server = nil
+	}
 }

@@ -4,52 +4,56 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/luscis/libol"
-	co "github.com/luscis/openceci/pkg/config"
-	ss "github.com/luscis/openceci/pkg/socks5"
+	"github.com/luscis/openlan/pkg/config"
+	co "github.com/luscis/openlan/pkg/config"
+	"github.com/luscis/openlan/pkg/libol"
+	"github.com/luscis/openlan/pkg/socks5"
 )
 
 type SocksProxy struct {
-	server *ss.Server
+	server *socks5.Server
 	out    *libol.SubLogger
-	cfg    *co.SocksProxy
+	cfg    *config.SocksProxy
 }
 
-func NewSocksProxy(cfg *co.SocksProxy) *SocksProxy {
+func NewSocksProxy(cfg *config.SocksProxy) *SocksProxy {
 	s := &SocksProxy{
 		cfg: cfg,
 		out: libol.NewSubLogger(cfg.Listen),
 	}
 	// Create a SOCKS5 server
-	user, pass := co.SplitSecret(cfg.Secret)
-	authMethods := make([]ss.Authenticator, 0, 2)
+	s.Initialize()
+	return s
+}
+
+func (s *SocksProxy) Initialize() {
+	user, pass := co.SplitSecret(s.cfg.Secret)
+	authMethods := make([]socks5.Authenticator, 0, 2)
 	if user != "" {
-		author := ss.UserPassAuthenticator{
-			Credentials: ss.StaticCredentials{
+		author := socks5.UserPassAuthenticator{
+			Credentials: socks5.StaticCredentials{
 				user: pass,
 			},
 		}
 		authMethods = append(authMethods, author)
 		s.out.Debug("SocksProxy: Auth user %s", user)
 	}
-	conf := &ss.Config{
-		Backends:    cfg.Backends,
+	conf := &socks5.Config{
+		Backends:    s.cfg.Backends,
 		AuthMethods: authMethods,
 		Logger:      s.out,
 	}
-	crt := cfg.Cert
+	crt := s.cfg.Cert
 	if crt != nil && crt.KeyFile != "" {
 		conf.TlsConfig = &tls.Config{
 			Certificates: crt.GetCertificates(),
 		}
 	}
-	server, err := ss.New(conf)
+	server, err := socks5.New(conf)
 	if err != nil {
 		s.out.Error("NewSocksProxy %s", err)
-		return nil
 	}
 	s.server = server
-	return s
 }
 
 func (s *SocksProxy) Start() {
@@ -77,4 +81,13 @@ func (s *SocksProxy) Start() {
 		}
 		return nil
 	})
+}
+
+func (s *SocksProxy) Stop() {
+	if s.server != nil {
+		s.server = nil
+	}
+}
+
+func (s *SocksProxy) Save() {
 }
