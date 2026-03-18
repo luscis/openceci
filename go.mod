@@ -6,7 +6,7 @@ replace github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.1
 
 require (
 	github.com/gorilla/mux v1.8.0
-	github.com/luscis/openlan v0.0.0-20260224081621-c10942774a25
+	github.com/luscis/openlan v0.0.0-20260318065711-e23de1aa3191
 	github.com/miekg/dns v1.1.72
 	gopkg.in/yaml.v2 v2.4.0
 )

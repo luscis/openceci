@@ -80,16 +80,17 @@ func (n *NameProxy) Initialize() {
 	}
 }
 
-func (n *NameProxy) Forward(name, addr, nexthop string) {
+func (n *NameProxy) Forward(name, addr, nexthop string) error {
 	opts := []string{}
 	if runtime.GOOS == "linux" {
 		opts = []string{"metric", fmt.Sprintf("%d", n.cfg.Metric)}
 	}
 	if out, err := network.RouteAdd("", addr, nexthop, opts...); err != nil {
-		n.out.Warn("Access.Forward: %s %s: %s", addr, err, out)
-		return
+		n.out.Warn("NameProxy.Forward: %s %s: %s", addr, err, out)
+		return err
 	}
 	n.out.Info("NameProxy.Forward: %s <- %s via %s ", nexthop, name, addr)
+	return nil
 }
 
 func (n *NameProxy) UpdateDNS(name, addr string) bool {
@@ -188,11 +189,18 @@ func (n *NameProxy) Start() {
 	dns.HandleFunc(".", n.handleDNS)
 	n.server = &dns.Server{Addr: n.listen, Net: "udp"}
 
-	n.out.Info("NameProxy.StartDNS on %s", n.listen)
+	n.out.Info("NameProxy.StartDNS on %s  all", n.listen)
 
 	for _, acc := range n.access {
 		libol.Go(acc.Start)
 	}
+
+	n.cfg.Backends.List(func(via *config.ForwardTo) {
+		libol.NewPromise().Go(func() error {
+			return n.Forward("all", via.Nameto, via.Server)
+		})
+	})
+
 	if err := n.server.ListenAndServe(); err != nil {
 		n.out.Error("NameProxy.StartDNS server: %v", err)
 	}

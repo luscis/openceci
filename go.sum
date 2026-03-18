@@ -32,8 +32,8 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/luscis/openlan v0.0.0-20260224081621-c10942774a25 h1:A5OWm7vvAqfr1E+KFlEjU/cjkFgQ7y5isGDRMUVqTXg=
-github.com/luscis/openlan v0.0.0-20260224081621-c10942774a25/go.mod h1:96EV1qDZBFLTDa8bIELB2cgTrwFlbEIMBGFsi2pwr3w=
+github.com/luscis/openlan v0.0.0-20260318065711-e23de1aa3191 h1:VkFcp553DVxOEklT66nvplg+Q95YgKmc+1tKoM88fOs=
+github.com/luscis/openlan v0.0.0-20260318065711-e23de1aa3191/go.mod h1:96EV1qDZBFLTDa8bIELB2cgTrwFlbEIMBGFsi2pwr3w=
 github.com/miekg/dns v1.1.72 h1:vhmr+TF2A3tuoGNkLDFK9zi36F2LS+hKTRW0Uf8kbzI=
 github.com/miekg/dns v1.1.72/go.mod h1:+EuEPhdHOsfk6Wk5TT2CzssZdqkmFhf8r+aVyDEToIs=
 github.com/mmcloughlin/avo v0.0.0-20200803215136-443f81d77104 h1:ULR/QWMgcgRiZLUjSSJMU+fW+RDMstRdmnDWj9Q+AsA=

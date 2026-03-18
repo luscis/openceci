@@ -26,7 +26,7 @@ github.com/klauspost/cpuid
 github.com/klauspost/reedsolomon
 # github.com/kr/pretty v0.1.0
 ## explicit
-# github.com/luscis/openlan v0.0.0-20260224081621-c10942774a25
+# github.com/luscis/openlan v0.0.0-20260318065711-e23de1aa3191
 ## explicit; go 1.24.0
 github.com/luscis/openlan/pkg/access
 github.com/luscis/openlan/pkg/access/http

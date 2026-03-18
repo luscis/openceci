@@ -52,6 +52,7 @@ builder:
 	docker exec openceci_dev bash -c "cd /usr/local/bin && ln -s ../go/bin/go . && ln -s ../go/bin/gofmt ."
 	docker exec openceci_dev git config --global --add safe.directory /opt/openceci
 	docker exec openceci_dev git config --global --add safe.directory /opt/openceci/dist/cert
+	docker exec openceci_dev git config --global pull.rebase false
 
 docker-gzip: ## binary by Docker
 	docker exec openceci_dev bash -c "cd /opt/openceci && make gzip"
