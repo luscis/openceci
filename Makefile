@@ -45,20 +45,20 @@ vendor:
 builder:
 	docker run -d -it \
 	--env http_proxy="${http_proxy}" --env https_proxy="${https_proxy}" \
-	--volume $(SRC_DIR)/:/opt/openceci --volume $(shell echo ~)/.ssh:/root/.ssh \
-	--name openceci_dev debian:bullseye bash
-	docker exec openceci_dev bash -c "apt update && apt install -y git lsb-release wget make gcc"
-	docker exec openceci_dev bash -c "wget https://golang.google.cn/dl/go1.24.0.linux-amd64.tar.gz && tar -xf go1.24.0.linux-amd64.tar.gz -C /usr/local"
-	docker exec openceci_dev bash -c "cd /usr/local/bin && ln -s ../go/bin/go . && ln -s ../go/bin/gofmt ."
-	docker exec openceci_dev git config --global --add safe.directory /opt/openceci
-	docker exec openceci_dev git config --global --add safe.directory /opt/openceci/dist/cert
-	docker exec openceci_dev git config --global pull.rebase false
+	--volume $(SRC_DIR)/:/root/openceci --volume $(shell echo ~)/.ssh:/root/.ssh \
+	--name opencec debian:bullseye bash
+	docker exec opencec bash -c "apt update && apt install -y git lsb-release wget make gcc"
+	docker exec opencec bash -c "wget https://golang.google.cn/dl/go1.24.0.linux-amd64.tar.gz && tar -xf go1.24.0.linux-amd64.tar.gz -C /usr/local"
+	docker exec opencec bash -c "cd /usr/local/bin && ln -s ../go/bin/go . && ln -s ../go/bin/gofmt ."
+	docker exec opencec git config --global --add safe.directory /root/openceci
+	docker exec opencec git config --global --add safe.directory /root/openceci/dist/cert
+	docker exec opencec git config --global pull.rebase false
 
 docker-gzip: ## binary by Docker
-	docker exec openceci_dev bash -c "cd /opt/openceci && make gzip"
+	docker exec opencec bash -c "cd /root/openceci && make gzip"
 
 docker-ceci: ## binary for ceci by Docker
-	docker exec openceci_dev bash -c "cd /opt/openceci && make ceci"
+	docker exec opencec bash -c "cd /root/openceci && make ceci"
 
 docker-rhel: docker-bin ## build image for redhat
 	cp -rf $(SRC_DIR)/docker/centos $(BUILD_DIR)

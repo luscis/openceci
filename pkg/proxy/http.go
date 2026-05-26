@@ -26,12 +26,23 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type passAuth struct {
+	Password string
+	Lease    time.Time
+}
+
 type HttpRecord struct {
 	Count    int
 	LastAt   string
 	CreateAt string
 	Domain   string
 	Bytes    int64
+}
+
+type HttpStats struct {
+	StartAt string
+	Total   int
+	Bytes   int64
 }
 
 func (r *HttpRecord) Update(bytes int64) {
@@ -48,16 +59,21 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 type HttpProxy struct {
-	proxer   Proxyer
-	pass     map[string]string
-	out      *libol.SubLogger
-	server   *http.Server
-	cfg      *co.HttpProxy
-	api      *mux.Router
-	startat  time.Time
-	requests map[string]*HttpRecord
-	lock     sync.RWMutex
-	socks    *SocksProxy
+	proxer    Proxyer
+	pass      map[string]*passAuth
+	passMod   time.Time
+	passLock  sync.RWMutex
+	out       *libol.SubLogger
+	server    *http.Server
+	cfg       *co.HttpProxy
+	statsFile string
+	statsDone chan struct{}
+	statsOnce sync.Once
+	api       *mux.Router
+	startat   time.Time
+	requests  map[string]*HttpRecord
+	lock      sync.RWMutex
+	socks     *SocksProxy
 }
 
 var (
@@ -74,11 +90,11 @@ func decodeBasicAuth(auth string) (username, password string, ok bool) {
 		return
 	}
 	cs := string(c)
-	s := strings.IndexByte(cs, ':')
-	if s < 0 {
+	before, after, ok0 := strings.Cut(cs, ":")
+	if !ok0 {
 		return
 	}
-	return cs[:s], cs[s+1:], true
+	return before, after, true
 }
 
 func encodeBasicAuth(value string) string {
@@ -119,12 +135,13 @@ func encodeText(w http.ResponseWriter, tmpl string, v interface{}) {
 
 func NewHttpProxy(cfg *co.HttpProxy, px Proxyer) *HttpProxy {
 	h := &HttpProxy{
-		out:      libol.NewSubLogger(cfg.Listen),
-		cfg:      cfg,
-		pass:     make(map[string]string),
-		api:      mux.NewRouter(),
-		requests: make(map[string]*HttpRecord),
-		proxer:   px,
+		out:       libol.NewSubLogger(cfg.Listen),
+		cfg:       cfg,
+		pass:      make(map[string]*passAuth),
+		api:       mux.NewRouter(),
+		requests:  make(map[string]*HttpRecord),
+		proxer:    px,
+		statsFile: cfg.StatsFile,
 	}
 	h.Initialize()
 	return h
@@ -135,11 +152,9 @@ func (t *HttpProxy) Initialize() {
 		Addr:    t.cfg.Listen,
 		Handler: t,
 	}
-	user, pass := co.SplitSecret(t.cfg.Secret)
-	if user != "" {
-		t.pass[user] = pass
-		t.out.Debug("HttpProxy: Auth user %s", user)
-	}
+	t.passLock.Lock()
+	t.pass = t.newPassMap()
+	t.passLock.Unlock()
 	if t.cfg.SocksProxy != nil {
 		t.socks = NewSocksProxy(t.cfg.SocksProxy)
 		t.socks.server.SetBackends(t)
@@ -155,8 +170,6 @@ func (t *HttpProxy) loadUrl() {
 	t.api.HandleFunc("/api/config", t.GetConfig).Methods("GET")
 	t.api.HandleFunc("/api/match/{domain}/to/{backend}", t.AddMatch).Methods("POST")
 	t.api.HandleFunc("/api/match/{domain}/to/{backend}", t.DelMatch).Methods("DELETE")
-	t.api.HandleFunc("/api/user/{user}/{pass}", t.AddUser).Methods("POST")
-	t.api.HandleFunc("/api/user/{user}", t.DelUser).Methods("DELETE")
 	t.api.HandleFunc("/pac", t.GetPac).Methods("GET")
 
 	t.api.NotFoundHandler = http.HandlerFunc(NotFound)
@@ -164,9 +177,26 @@ func (t *HttpProxy) loadUrl() {
 
 func (t *HttpProxy) loadPass() {
 	file := t.cfg.Password
-	if file == "" || libol.FileExist(file) != nil {
+	if file == "" {
 		return
 	}
+	info, err := os.Stat(file)
+	if err != nil {
+		if os.IsNotExist(err) {
+			t.passLock.Lock()
+			t.pass = t.newPassMap()
+			t.passMod = time.Time{}
+			t.passLock.Unlock()
+		}
+		return
+	}
+	t.passLock.RLock()
+	last := t.passMod
+	t.passLock.RUnlock()
+	if !info.ModTime().After(last) {
+		return
+	}
+	passMap := t.newPassMap()
 	reader, err := libol.OpenRead(file)
 	if err != nil {
 		libol.Warn("HttpProxy.LoadPass open %v", err)
@@ -175,42 +205,91 @@ func (t *HttpProxy) loadPass() {
 	defer reader.Close()
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		line := scanner.Text()
-		columns := strings.SplitN(line, ":", 2)
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Password lines may carry extra metadata after the password, for example:
+		// user@network:password:role:expires
+		// Only the first two fields matter for authentication, while the
+		// last field is used as the optional lease time.
+		columns := strings.SplitN(line, ":", 4)
 		if len(columns) < 2 {
 			continue
 		}
-		user := columns[0]
-		pass := columns[1]
-		t.pass[user] = pass
+		user := strings.TrimSpace(columns[0])
+		secret := strings.TrimSpace(columns[1])
+		lease := time.Time{}
+		if len(columns) > 3 {
+			lease, _ = libol.GetLeaseTime(strings.TrimSpace(columns[3]))
+		}
+		if name, network := parseUserNetwork(user); t.allowPassUser(network) {
+			passMap[name] = &passAuth{
+				Password: secret,
+				Lease:    lease,
+			}
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		libol.Warn("HttpProxy.LoadPass scaner %v", err)
+		return
 	}
+
+	t.passLock.Lock()
+	t.pass = passMap
+	t.passMod = info.ModTime()
+	t.passLock.Unlock()
 }
 
-func (t *HttpProxy) savePass() error {
-	file := t.cfg.Password
-	writer, err := libol.OpenTrunk(file)
-	if err != nil {
-		return err
+func (t *HttpProxy) newPassMap() map[string]*passAuth {
+	pass := make(map[string]*passAuth)
+	if user, secret := co.SplitSecret(t.cfg.Secret); user != "" {
+		pass[user] = &passAuth{
+			Password: secret,
+		}
+		t.out.Debug("HttpProxy: Auth user %s", user)
 	}
-	for user, pass := range t.pass {
-		line := user + ":" + pass
-		_, _ = writer.WriteString(line + "\n")
+	return pass
+}
+
+func parseUserNetwork(user string) (string, string) {
+	user = strings.TrimSpace(user)
+	if idx := strings.LastIndexByte(user, '@'); idx >= 0 {
+		return user[:idx], user[idx+1:]
 	}
-	return nil
+	return user, ""
+}
+
+func (t *HttpProxy) allowPassUser(network string) bool {
+	if t.cfg == nil {
+		return false
+	}
+	want := strings.TrimSpace(t.cfg.Network)
+	if want == "" {
+		return false
+	}
+	return network == want
 }
 
 func (t *HttpProxy) isAuth(username, password string) bool {
-	if p, ok := t.pass[username]; ok {
-		return p == password
+	t.passLock.RLock()
+	defer t.passLock.RUnlock()
+	name, _ := parseUserNetwork(username)
+	if p, ok := t.pass[name]; ok && p != nil && p.Password == password {
+		now := time.Now()
+		if p.Lease.Year() < 2000 || p.Lease.After(now) {
+			return true
+		}
 	}
 	return false
 }
 
 func (t *HttpProxy) CheckAuth(w http.ResponseWriter, r *http.Request) bool {
-	if len(t.pass) == 0 {
+	t.loadPass()
+	t.passLock.RLock()
+	empty := len(t.pass) == 0
+	t.passLock.RUnlock()
+	if empty {
 		return true
 	}
 	auth := r.Header.Get("Proxy-Authorization")
@@ -358,8 +437,6 @@ func (t *HttpProxy) cloneRequest(r *http.Request, secret string) ([]byte, error)
 
 func (t *HttpProxy) doRecord(r *http.Request, bytes int64) {
 	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	record, ok := t.requests[r.URL.Host]
 	if !ok {
 		record = &HttpRecord{
@@ -368,11 +445,32 @@ func (t *HttpProxy) doRecord(r *http.Request, bytes int64) {
 		t.requests[record.Domain] = record
 	}
 	record.Update(bytes)
+	t.lock.Unlock()
+}
+
+func (t *HttpProxy) snapshotStats() *HttpStats {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	data := &HttpStats{
+		StartAt: t.startat.Local().String(),
+		Total:   len(t.requests),
+	}
+	for _, record := range t.requests {
+		data.Bytes += record.Bytes
+	}
+	return data
+}
+
+func (t *HttpProxy) saveStats() {
+	file := strings.TrimSpace(t.statsFile)
+	if file == "" {
+		return
+	}
+	_ = libol.MarshalSave(t.snapshotStats(), file, true)
 }
 
 func (t *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	t.out.Debug("HttpProxy.ServeHTTP %v", r.URL)
-
 	if !t.CheckAuth(w, r) {
 		t.out.Info("HttpProxy.ServeHTTP Required %v Authentication", r.URL)
 		return
@@ -385,7 +483,7 @@ func (t *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.doRecord(r, 0)
 	via := t.FindBackend(r.URL.Host)
 	if via != nil {
-		t.out.Info("HttpProxy.ServeHTTP %s <- %s %s", via.Server, r.Method, r.URL.Host)
+		t.out.Info("HttpProxy.ServeHTTP %s <- %s %s %s", via.Server, r.RemoteAddr, r.Method, r.URL.Host)
 		conn, err := t.openConn(via.Protocol, via.Server, via.Insecure)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
@@ -455,6 +553,24 @@ func (t *HttpProxy) Start() {
 	}
 	promise.Go(func() error {
 		t.startat = time.Now()
+		t.saveStats()
+		if strings.TrimSpace(t.statsFile) != "" {
+			if t.statsDone == nil {
+				t.statsDone = make(chan struct{})
+			}
+			libol.Go(func() {
+				ticker := time.NewTicker(10 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ticker.C:
+						t.saveStats()
+					case <-t.statsDone:
+						return
+					}
+				}
+			})
+		}
 		if crt == nil || crt.KeyFile == "" {
 			if err := t.server.ListenAndServe(); err != nil {
 				t.out.Warn("HttpProxy.start %s", err)
@@ -544,8 +660,8 @@ func (t *HttpProxy) GetIndex(w http.ResponseWriter, r *http.Request) {
 		Bytes    int64
 		Requests []*HttpRecord
 	}{
-		Total:   len(t.requests),
 		StartAt: t.startat.Local().String(),
+		Total:   len(t.requests),
 	}
 	for _, record := range t.requests {
 		data.Requests = append(data.Requests, record)
@@ -572,19 +688,7 @@ func (t *HttpProxy) GetIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *HttpProxy) GetStats(w http.ResponseWriter, r *http.Request) {
-	t.lock.RLock()
-	data := &struct {
-		StartAt string
-		Total   int
-		Bytes   int64
-	}{
-		Total:   len(t.requests),
-		StartAt: t.startat.Local().String(),
-	}
-	for _, record := range t.requests {
-		data.Bytes += record.Bytes
-	}
-	t.lock.RUnlock()
+	data := t.snapshotStats()
 
 	if t.findQuery(r, "format") == "json" {
 		encodeJson(w, data)
@@ -618,35 +722,6 @@ func (t *HttpProxy) AddMatch(w http.ResponseWriter, r *http.Request) {
 	}
 	t.lock.Unlock()
 	t.Save()
-}
-
-func (t *HttpProxy) AddUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	user := vars["user"]
-	pass := vars["pass"]
-
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	t.pass[user] = pass
-	encodeYaml(w, "success")
-	t.savePass()
-}
-
-func (t *HttpProxy) DelUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	user := vars["user"]
-
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if _, ok := t.pass[user]; ok {
-		delete(t.pass, user)
-	}
-	encodeYaml(w, "success")
-	t.savePass()
 }
 
 func (t *HttpProxy) Save() {
@@ -724,8 +799,14 @@ func (t *HttpProxy) GetApi(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *HttpProxy) Stop() {
+	t.statsOnce.Do(func() {
+		if t.statsDone != nil {
+			close(t.statsDone)
+		}
+	})
 	if t.server != nil {
 		t.server.Shutdown(context.Background())
 		t.server = nil
 	}
+	t.saveStats()
 }
